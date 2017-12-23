@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "RIOT Games API Challenge 2017",
   "scripts": {
+    "start-server": "node server/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Daniel Chong",
