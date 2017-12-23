@@ -4,6 +4,8 @@
   "description": "RIOT Games API Challenge 2017",
   "scripts": {
     "start-server": "node server/index.js",
+    "build-prod": "webpack --config client/webpack.js",
+    "build-dev": "webpack -w --config client/webpack.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Daniel Chong",
