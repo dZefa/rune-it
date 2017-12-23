@@ -6,6 +6,8 @@ const bodyParser = require('body-parser');
 const Morgan = require('morgan');
 const Dotenv = require('dotenv');
 
+const db = require('./db/index');
+
 // Initialize environment variables
 Dotenv.config({ path: path.resolve(__dirname, 'server.env')});
 
