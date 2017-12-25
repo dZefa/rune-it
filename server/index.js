@@ -7,6 +7,7 @@ const Morgan = require('morgan');
 const Dotenv = require('dotenv');
 
 const db = require('./db/index');
+const log = require('./lib/log');
 
 // Initialize environment variables
 Dotenv.config({ path: path.resolve(__dirname, 'server.env')});
@@ -28,5 +29,5 @@ app.use('*', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Server is listening on port: ${PORT}`);
+  log(`Server is listening on port: ${PORT}`);
 });
