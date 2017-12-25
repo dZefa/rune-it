@@ -1,12 +1,24 @@
-const Sequelize = require('sequelize');
+const mongoose = require('mongoose');
 
-const db = require('../index');
-
-const Summoner = db.define('summoner', {
-  summonerID: {
-    type: Sequelize.INTEGER,
-    allowNull: false,
+const summonerSchema = mongoose.Schema({
+  summonerName: {
+    type: String,
+    required: true,
   },
+  summonerId: {
+    type: String,
+    required: true,
+  },
+  profileIconId: {
+    type: String,
+    required: true,
+  },
+  riotAccId: {
+    type: String,
+    required: true,
+  }
 });
 
-module.exports = Summoner;
+const Summoner = mongoose.model('Summoner', summonerSchema);
+
+module.exports = { Summoner };
