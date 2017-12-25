@@ -13,7 +13,7 @@ const summonerSchema = mongoose.Schema({
     type: String,
     required: true,
   },
-  riotAccId: {
+  accountId: {
     type: String,
     required: true,
   }
