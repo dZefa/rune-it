@@ -6,6 +6,7 @@ const Dotenv = require('dotenv');
 
 const db = require('./db/index');
 const log = require('./lib/log');
+const { updateRunes } = require('./lib/playerList');
 
 // Initialize environment variables
 Dotenv.config({ path: path.resolve(__dirname, 'matchList.env')});
@@ -18,7 +19,7 @@ const PORT = process.env.PORT;
 app.use(cors());
 
 // Initialize Service
-app.post('/updateRunes', )
+app.post('/updateRunes', updateRunes);
 
 app.listen(PORT, () => {
   log(`MatchList-Service server is listening on port: ${PORT}`);
