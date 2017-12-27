@@ -9,13 +9,20 @@ const log = require('../../lib/log');
 // Promisify mongoose queries
 mongoose.Promise = bluebird;
 
-const checkMatchList = async (id) => {
-  try {
-    const matchCheck = await MatchList.findOne({ matchId: id });
+const checkMatchList = async (matchIds) => {
+  const matchList = [];
 
-    if (!matchCheck) {
-      const addMatch = 
+  try {
+    for (let key in matchIds) {
+      const matchCheck = await MatchList.findOne({ matchId: key});
+      if (!matchCheck) {
+        matchList.push(key);
+        const newMatch = new MatchList({ matchId: key });
+        await newMatch.save();
+        log(`New match added. Matchid: ${key}`);
+      }
     }
+    
   } catch (err) {
     log(`Error in checkList: ${err}`);
     return err;
