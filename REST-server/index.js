@@ -29,5 +29,5 @@ app.use('*', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  log(`Server is listening on port: ${PORT}`);
+  log(`RESTful-server is listening on port: ${PORT}`);
 });
