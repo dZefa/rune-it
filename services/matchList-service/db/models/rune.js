@@ -18,7 +18,7 @@ const runeSchema = mongoose.Schema({
     required: true,
   },
   matchResult: {
-    type: String,
+    type: Boolean,
     required: true,
   },
 });
