@@ -3,6 +3,7 @@ const axios = require('axios');
 const log = require('./log');
 const { checkMatchList } = require('../db/controller/runeController');
 
+// Begins the update and calls upon multiple methods
 const updateRunes = async (req, res) => {
   let playerIds;
   const matchList = {};
@@ -30,6 +31,7 @@ const updateRunes = async (req, res) => {
   }
 };
 
+// Grabs all challenger SUMMONER ids
 const getChallengerSumId = () => {
   axios.get({
     url: `${process.env.RIOT_URL}/league/v3/challengerleagues/by-queue/RANKED_SOLO_5x5`,
@@ -49,6 +51,7 @@ const getChallengerSumId = () => {
     });
 };
 
+// Uses challenger SUMMONER ids to get their respective ACCOUNT ids
 const getAccountId = (id) => {
   axios.get({
     url: `${process.env.RIOT_URL}/summoner/v3/summoners/${id}`,
@@ -66,6 +69,7 @@ const getAccountId = (id) => {
     });
 };
 
+// Gets their 20 recent RANKED SOLO games using ACCOUNT ids
 const getMatchHist = (id) => {
   axios.get({
     url: `${process.env.RIOT_URL}/match/v3/matchlists/by-account/${id}?queue=420&endIndex=20`,
