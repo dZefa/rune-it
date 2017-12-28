@@ -10,6 +10,7 @@ const { createRuneHash } = require('../../lib/createRuneHash');
 // Promisify mongoose queries
 mongoose.Promise = bluebird;
 
+// Checks matchIds with database to prevent duplicate data
 const checkMatchList = async (matchIds) => {
   const matchList = [];
 
@@ -34,6 +35,7 @@ const checkMatchList = async (matchIds) => {
   }
 };
 
+// Using non-used MatchIds, add each summoner w/ their champ + runes into database
 const addMatchPerSummoner = async (matchId) => {
   axios.get({
     url: `${process.env.RIOT_URL}/match/v3/matches/${matchId}`,

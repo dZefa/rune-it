@@ -1,3 +1,4 @@
+// Hashes runes to save space in database
 const createRuneHash = (runes) => {
   const runeHash = new Array(8).fill(0);
 
