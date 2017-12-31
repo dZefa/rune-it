@@ -4,76 +4,120 @@ const axios = require('axios');
 
 const { MatchList } = require('../models/matchList');
 const { Rune } = require('../models/rune');
+const { Champion } = require('../models/champion');
 const log = require('../../lib/log');
 const { createRuneHash } = require('../../lib/createRuneHash');
 
 // Promisify mongoose queries
 mongoose.Promise = bluebird;
 
-// Checks matchIds with database to prevent duplicate data
-const checkMatchList = async (matchIds) => {
-  const matchList = [];
-
-  try {
-    for (let key in matchIds) {
-      const matchCheck = await MatchList.findOne({ matchId: key});
-      if (!matchCheck) {
-        matchList.push(key);
-        const newMatch = new MatchList({ matchId: key });
-        await newMatch.save();
-        log(`New match added. Matchid: ${key}`);
+// Starts update on match and rune list addition
+const updateMatchLists = (req, res, matchList) => {
+  matchList.forEach(async (matchId) => {
+    const check = await checkMatchList(matchId);
+    setTimeout(() => {
+      if (check) {
+        addMatchPerSummoner(matchId)
+          .then(({ accountIds, participants, error }) => {
+            if (error !== 429) {
+              log(`This is participants for Match (${matchId}): ${JSON.stringify(accountIds)}`);
+              participants.forEach(async (player) => {
+                const runeHash = await createRuneHash({ 
+                  primaryStyle: player.stats.perkPrimaryStyle,
+                  subStyle: player.stats.perkSubStyle,
+                  perk0: player.stats.perk0,
+                  perk1: player.stats.perk1,
+                  perk2: player.stats.perk2,
+                  perk3: player.stats.perk3,
+                  perk4: player.stats.perk4,
+                  perk5: player.stats.perk5,
+                });
+                if (runeHash !== '') {
+                  log(`This is runeHash: ${runeHash}`);
+                  await addToRune({
+                    matchId: `${matchId}`,
+                    championId: `${player.championId}`,
+                    accountId: `${accountIds[player.participantId]}`,
+                    runeHash: `${runeHash}`,
+                    matchResult: player.stats.win
+                  });
+                }
+              });
+            }
+          })
+          .catch(err => {
+            log(`Error grabbing results from addMatchPerSummoner. Error: ${err}`);
+          });
       }
-    }
+    }, 1000);
+  });
+}
 
-    matchList.forEach(match => {
-      addMatchPerSummoner(match);
-    });
-    log(`Finished adding new runes and matches`);
-  } catch (err) {
-    log(`Error in checkList: ${err}`);
-    return err;
-  }
+// Checks matchIds with database to prevent duplicate data
+const checkMatchList = (matchId) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const matchCheck = await MatchList.findOne({ matchId: matchId });
+      if (!matchCheck) {
+        const newMatch = new MatchList({ matchId: matchId });
+        await newMatch.save();
+        log(`New match added. Matchid: ${matchId}`);
+        resolve(true);
+      } else {
+        resolve(false);
+      }
+    } catch (err) {
+      log(`Error in checkList-matchlist: ${err}`);
+      reject(err);
+    }
+  });
 };
 
 // Using non-used MatchIds, add each summoner w/ their champ + runes into database
-const addMatchPerSummoner = async (matchId) => {
-  axios.get({
-    url: `${process.env.RIOT_URL}/match/v3/matches/${matchId}`,
-    method: 'get',
-    headers: {
-      'X-Riot-Token': `${process.env.RIOT_TOKEN}`
-    }
-  })
-    .then(response => {
-      const accountIds = {};
-      response.participantIdentities.forEach(player => {
-        let participantId = player.participantId;
-        accountIds.participantId = player.player.accountId;
-      });
-
-      response.participants.forEach(player => {
-        let runes = {
-          primaryStyle: player.stats.perkPrimaryStyle,
-          subStyle: player.stats.perkSubStyle,
-          perk0: player.stats.perk0,
-          perk1: player.stats.perk1,
-          perk2: player.stats.perk2,
-          perk3: player.stats.perk3,
-          perk4: player.stats.perk4,
-          perk5: player.stats.perk5,
-        };
-        const runeHash = await createRuneHash(runes);
-        const newRune = new Rune({
-          matchId: `${matchId}`,
-          championId: `${player.championId}`,
-          accountId: `${accountIds[player.participantId]}`,
-          runeHash: `${runeHash}`,
-          matchResult: player.stats.win
-        });
-        await newRune.save();
-        log(`New Rune added`);
-      });
+const addMatchPerSummoner = (matchId) => {
+  return new Promise ((resolve, reject) => {
+    axios({
+      url: `${process.env.RIOT_URL}/match/v3/matches/${matchId}`,
+      method: 'get',
+      headers: {
+        'X-Riot-Token': `${process.env.RIOT_TOKEN}`
+      }
     })
+      .then(response => {
+        const accountIds = {};
+        response.data.participantIdentities.forEach(player => {
+          let participantId = player.participantId;
+          accountIds[participantId] = player.player.accountId;
+        });
+        resolve({ accountIds, participants: response.data.participants, error: null });
+      })
+      .catch(err => {
+        log(`Error getting match info from riot. Error: ${err}`);
+        if (err.response.status !== 429) {
+          reject(err);
+        }
+        resolve({ error: err.response.status });
+      })
+  })
 };
 
-module.exports = { checkMatchList };
+const addToRune = async (runeObj) => {
+  const newRune = new Rune(runeObj);
+  log(`This is new Rune: ${newRune}`);
+  await newRune.save();
+  log(`New Rune added`);
+};
+
+const updateRunes = async (req, res) => {
+  try {
+    const allRunes = await Rune.find({ championId: req.body.championId });
+    if (allRunes) {
+      log('This is allRunes: ', allRunes);
+    }
+  } catch (err) {
+    log(`Error in updateRunes: ${err}`);
+    res.status(500).send(err);
+  }
+}
+
+module.exports = { updateMatchLists, updateRunes };
