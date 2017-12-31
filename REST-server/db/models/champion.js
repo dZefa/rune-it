@@ -25,6 +25,10 @@ const championSchema = mongoose.Schema({
     type: String,
     required: false,
   },
+  totalGames: {
+    type: String,
+    required: false,
+  },
 });
 
 const Champion = mongoose.model('Champion', championSchema);
