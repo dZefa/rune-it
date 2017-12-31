@@ -4,4 +4,4 @@ const log = (...args) => {
   }
 };
 
-export default log;
+module.exports = log;
