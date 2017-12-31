@@ -1,92 +1,126 @@
 const axios = require('axios');
+const { setTimeout } = require('timers');
+const Promise = require('bluebird');
 
 const log = require('./log');
-const { checkMatchList } = require('../db/controller/runeController');
+const { updateMatchLists } = require('../db/controller/runeController');
 
 // Begins the update and calls upon multiple methods
-const updateRunes = async (req, res) => {
-  let playerIds;
-  const matchList = {};
-
-  try {
-    playerIds = await getChallengerSumId();
-    if (playerIds) {
-      playerIds.forEach(id => {
-        const accountId = await getAccountId(id);
-        if (accountId) {
-          const matchHist = await getMatchHist(accountId);
-          if (matchHist) {
-            matchHist.forEach(match => {
-              matchList.match ? null : matchList.match = accountId;
-            });
-          }
+const updateMatch = (req, res) => {
+  getChallengerSumId()
+    .then((playerIds) => {
+      let accountIds = [];
+      playerIds.forEach(async (id) => {
+        try {
+          let accId = await getAccountId(id);
+          accountIds.push(accId);
+        } catch (err) {
+          log(`Error in getting each accId. Error: ${err}`);
         }
       });
-      await checkMatchList(matchList);
-      res.status(200).send('Done adding/updating runes and matches');
-    }
-  } catch (err) {
-    log(`Error in updateRunes: ${err}`);
-    res.status(400).send(err);
-  }
+
+      setTimeout(() => {
+        const matchHist = {};
+        log(`Account Ids: ${accountIds}`);
+        accountIds.forEach(async (id) => {
+          let matchHistList = await getMatchHist(id);
+
+          matchHistList.forEach(match => {
+            matchHist[match] ? null : matchHist[match] = id;
+          });
+        });
+
+        setTimeout(() => {
+          log(`Match History Ids: ${JSON.stringify(matchHist)}`);
+          let matchList = Object.keys(matchHist);
+
+          updateMatchLists(req, res, matchList);
+        }, 2000);
+      }, 1000);
+    })
+    .catch(err => {
+      log(`Error in updateMatch: getChallengerSumId. Error: ${err}`);
+      res.status(500).send(err);
+    });
 };
 
 // Grabs all challenger SUMMONER ids
 const getChallengerSumId = () => {
-  axios.get({
-    url: `${process.env.RIOT_URL}/league/v3/challengerleagues/by-queue/RANKED_SOLO_5x5`,
-    method: 'get',
-    headers: {
-      'X-Riot-Token': `${process.env.RIOT_TOKEN}`
-    }
-  })
-    .then(response => {
-      return response.entries.map(player => {
-        return player.playerOrTeamId;
-      });
+  return new Promise((resolve, reject) => {
+    axios({
+      url: `${process.env.RIOT_URL}/league/v3/challengerleagues/by-queue/RANKED_SOLO_5x5`,
+      method: 'get',
+      headers: {
+        'X-Riot-Token': `${process.env.RIOT_TOKEN}`
+      }
     })
-    .catch(err => {
-      log(`Error grabbing challenger accounts from Riot: ${err}`);
-      return false;
-    });
+      .then(response => {
+        let result = [];
+        for(let i = 0; i < 10; i++) {
+          result.push(response.data.entries[i].playerOrTeamId);
+        }
+        log(`Done grabbing challenger summoner Ids: ${result}`);
+        resolve(result);
+      })
+      .catch(err => {
+        log(`Error grabbing challenger accounts from Riot: ${err}`);
+        if (err.response.status !== 429) {
+          reject(err);
+        }
+      });
+  });
 };
 
 // Uses challenger SUMMONER ids to get their respective ACCOUNT ids
-const getAccountId = (id) => {
-  axios.get({
-    url: `${process.env.RIOT_URL}/summoner/v3/summoners/${id}`,
-    method: 'get',
-    headers: {
-      'X-Riot-Token': `${process.env.RIOT_TOKEN}`
-    }
-  })
-    .then(response => {
-      return response.id;
+const getAccountId = (accId) => {
+  return new Promise((resolve, reject) => {
+    axios({
+      url: `${process.env.RIOT_URL}/summoner/v3/summoners/${accId}`,
+      method: 'get',
+      headers: {
+        'X-Riot-Token': `${process.env.RIOT_TOKEN}`
+      }
     })
-    .catch(err => {
-      log(`Error getting account Id: ${err}`);
-      return false;
-    });
-};
-
-// Gets their 20 recent RANKED SOLO games using ACCOUNT ids
-const getMatchHist = (id) => {
-  axios.get({
-    url: `${process.env.RIOT_URL}/match/v3/matchlists/by-account/${id}?queue=420&endIndex=20`,
-    method: 'get',
-    headers: {
-      'X-Riot-Token': `${process.env.RIOT_TOKEN}`
-    }
-  })
-    .then(response => {
-      return response.matches.map(match => {
-        return match.gameId;
+      .then(response => {
+        resolve(response.data.accountId);
+      })
+      .catch(err => {
+        log(`Error getting account Id: ${err}`);
+        if (err.response.status !== 429) {
+          reject(err);
+        }
       });
-    })
-    .catch(err => {
-      log(`Error getting Match history: ${err}`)
-      return false;
-    })
+  });
 };
 
-module.exports = { updateRunes };
+// Gets their 10 recent RANKED SOLO games using ACCOUNT ids
+const getMatchHist = (id) => {
+  return new Promise((resolve, reject) => {
+    axios({
+      url: `${process.env.RIOT_URL}/match/v3/matchlists/by-account/${id}`,
+      method: 'get',
+      headers: {
+        'X-Riot-Token': `${process.env.RIOT_TOKEN}`
+      },
+      params: {
+        queue: 420,
+        endIndex: 5
+      }
+    })
+      .then(response => {
+        let result = response.data.matches.map(match => {
+          return match.gameId;
+        });
+        log(`This is result from match hist: ${result}`);
+        resolve(result);
+      })
+      .catch(err => {
+        log(`Error getting Match history: ${err}`)
+        if (err.response.status !== 429) {
+          reject(err);
+        }
+      });
+  });
+};
+
+module.exports = { updateMatch };
