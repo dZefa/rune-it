@@ -1,6 +1,6 @@
 // Hashes runes to save space in database
 const createRuneHash = (runes) => {
-  const runeHash = new Array(8).fill(0);
+  let runeHash = new Array(8).fill(0);
 
   for (let key in runes) {
     if (key === 'primaryStyle') {
@@ -22,7 +22,7 @@ const createRuneHash = (runes) => {
     }
   }
 
-  return runeHash.join();
+  return runeHash.join('');
 }
 
 module.exports = { createRuneHash };
