@@ -1,5 +1,4 @@
 const axios = require('axios');
-const { setTimeout } = require('timers');
 const Promise = require('bluebird');
 
 const log = require('./log');
@@ -34,7 +33,8 @@ const updateMatch = (req, res) => {
           log(`Match History Ids: ${JSON.stringify(matchHist)}`);
           let matchList = Object.keys(matchHist);
 
-          updateMatchLists(req, res, matchList);
+          updateMatchLists(matchList);
+          res.status(202).send(`Now updating Match and Rune Lists`);
         }, 2000);
       }, 1000);
     })
