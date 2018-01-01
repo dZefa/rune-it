@@ -22,12 +22,12 @@ const updateChampionData = async (req, res) => {
       };
       getBestRune(data)
         .then((best) => {
-          newChampData.bestRune = best.rune;
+          newChampData.bestRune = `${best.rune}`;
           newChampData.bestWR = `${best.wr}`;
           log(`This is newChampData after getBestRune: ${JSON.stringify(newChampData)}`);
           getPopRune(data)
             .then((popular) => {
-              newChampData.popularRune = popular.rune;
+              newChampData.popularRune = `${popular.rune}`;
               newChampData.popularWR = `${popular.wr}`;
               log(`This is newChampData after getPopRune: ${JSON.stringify(newChampData)}`);
               updateChampion(newChampData)
@@ -116,39 +116,42 @@ const updateChampion = (champData) => {
   return new bluebird(async (resolve, reject) => {
     const champion = await Champion.findOne({ championId: `${champData.championId}`});
     if (!champion) {
-      let championName = '';
       await axios({
-        url: `${process.env.RIOT_URL}/static-data/v3/champions/${champData.championId}`,
+        url: `${process.env.RIOT_URL}/static-data/v3/champions/${Number(champData.championId)}`,
         method: 'get',
         headers: {
           'X-Riot-Token': `${process.env.RIOT_TOKEN}`
         },
         params: {
-          'locale': 'en_US',
+          locale: 'en_US'
         }
       })
         .then(response => {
           log(`This is response from Riot in updateChampion: ${JSON.stringify(response.data)}`);
-          championName = response.data.name;
-          const newChamp = new Champion.create({
+          new Champion({
             championId: `${champData.championId}`,
-            championName,
+            championName: response.data.name,
             popularRune: `${champData.popularRune}`,
             popularWR: `${champData.popularWR}`,
             bestRune: `${champData.bestRune}`,
             bestWR: `${champData.bestWR}`,
             totalGames: `${champData.totalGames}`
           }).save((err, data) => {
-            log(`New champion data added to database: ${data}`);
-            resolve(true);
-          })
+            if (err) {
+              log(`Error adding new champ to database: ${err}`);
+              reject(err)
+            } else {
+              log(`New champion data added to database: ${data}`);
+              resolve(true);
+            }
+          });
         })
         .catch(err => {
           log(`Error getting champion info from Riot. Error: ${err}`);
           if (err.response.status !== 429) {
             reject(err);
           }
-        })
+        });
     } else {
       await Champion.findOneAndUpdate(
         { 
