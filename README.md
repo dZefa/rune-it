@@ -88,3 +88,9 @@ The Service is written in Javascript using NodeJS and [expressJS](https://expres
 - Babel
 - Axios
 - Bluebird
+
+# Challenges so far
+
+I have had a very big challenge trying to get the data how I would like it to look using Riot's API.
+Basically what I am currently doing is: grabbing high elo summoner ids -> grabbing their account ids -> grabbing their most recent ranked solo games -> grabbing ids, champion ids, runes, win/loss from each match (while making sure there are no repeating matches being looked up) -> parsing the runes and then adding to the rune collection.
+This is only for adding new data into the database. So as I have said, the hardest part so far was working my way around the API to getting the information I want while trying not to get hit by the rate limit.
