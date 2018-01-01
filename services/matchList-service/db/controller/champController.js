@@ -16,43 +16,141 @@ const updateChampionData = async (req, res) => {
       res.status(404).send(err);
     } else {
       log(`This is resulting collection: ${data}`);
-      const newChampData = {};
+      const newChampData = {
+        championId: req.body.championId,
+        totalGames: data.length
+      };
       getBestRune(data)
-        .then((bestRune) => {
-          if (!bestRune) {
-            
-          }
+        .then((best) => {
+          newChampData.bestRune = best.rune;
+          newChampData.bestWR = `${best.wr}`;
+          log(`This is newChampData after getBestRune: ${JSON.stringify(newChampData)}`);
+          getPopRune(data)
+            .then((popular) => {
+              newChampData.popularRune = popular.rune;
+              newChampData.popularWR = `${popular.wr}`;
+              log(`This is newChampData after getPopRune: ${JSON.stringify(newChampData)}`);
+              updateChampion(newChampData);
+            })
         })
     }
   });
 };
 
+// Gets best rune based on WR
 const getBestRune = (data) => {
   return new bluebird((resolve, reject) => {
     const runeFreq = {};
+    let counter = 0;
     data.forEach(game => {
       if (game.matchResult) {
-        runeStorage[game.runeHash] ? runeStorage[game.runeHash] += 1 : runeStorage[game.runeHash] = 1;
+        runeFreq[game.runeHash] = runeFreq[game.runeHash] ? runeFreq[game.runeHash] + 1 : 1;
+        counter++;
       }
     });
     const tempRuneArr = [];
     for (let key in runeFreq) {
       tempRuneArr.push([key, runeFreq[key]]);
-    };
+    }
     tempRuneArr.sort((a,b) => {
       return b[1] - a[1];
     });
-    log(`This is sorted rune list of wins: `)
+    log(`This is sorted best rune list: ${tempRuneArr}`)
     if (tempRuneArr.length === 0) {
-      return -1;
+      resolve({ rune: '', wr: 0 });
+    } else {
+      let wr = counter/data.length;
+      resolve({ rune: tempRuneArr[0][0], wr });
     }
-    return tempRuneArr[0][0];
   });
 };
 
-const updateChampion = (champData) => {
+// Gets most popular rune disregarding WR
+const getPopRune = (data) => {
   return new bluebird((resolve, reject) => {
+    const runeFreq = {};
+    let counter = 0;
+    data.forEach(game => {
+      if (game.matchResult) {
+        counter++;
+      }
+      runeFreq[game.runeHash] = runeFreq[game.runeHash] ? runeFreq[game.runeHash] + 1 : 1;
+    });
+    const tempRuneArr = [];
+    for(let key in runeFreq) {
+      tempRuneArr.push([key, runeFreq[key]]);
+    }
+    tempRuneArr.sort((a,b) => {
+      return b[1] - a[1];
+    });
+    log(`This is sorted pop rune list: ${tempRuneArr}`);
+    if (tempRuneArr.length === 0) {
+      resolve({ rune: '', wr: 0 });
+    } else {
+      let wr = counter/data.length;
+      resolve({ rune: tempRuneArr[0][0], wr });
+    }
+  });
+}
 
+const updateChampion = (champData) => {
+  return new bluebird(async (resolve, reject) => {
+    const champion = await Champion.findOne({ championId: `${champData.championId}`});
+    if (!champion) {
+      let championName = '';
+      await axios({
+        url: `${process.env.RIOT_URL}/static-data/v3/champions/${champData.championId}`,
+        method: 'get',
+        headers: {
+          'X-Riot-Token': `${process.env.RIOT_TOKEN}`
+        },
+        params: {
+          'locale': 'en_US',
+        }
+      })
+        .then(response => {
+          log(`This is response from Riot in updateChampion: ${JSON.stringify(response.data)}`);
+          championName = response.data.name;
+          const newChamp = new Champion.create({
+            championId: `${champData.championId}`,
+            championName,
+            popularRune: `${champData.popularRune}`,
+            popularWR: `${champData.popularWR}`,
+            bestRune: `${champData.bestRune}`,
+            bestWR: `${champData.bestWR}`,
+            totalGames: `${champData.totalGames}`
+          }).save((err, data) => {
+            log(`New champion data added to database: ${data}`);
+            resolve(true);
+          })
+        })
+        .catch(err => {
+          log(`Error getting champion info from Riot. Error: ${err}`);
+          if (err.response.status !== 429) {
+            reject(err);
+          }
+        })
+    } else {
+      await Champion.findOneAndUpdate(
+        { 
+          championId: `${champData.championId}`
+        }, {
+          popularRune: `${champData.popularRune}`,
+          popularWR: `${champData.popularWR}`,
+          bestRune: `${champData.bestRune}`,
+          bestWR: `${champData.bestWR}`,
+          totalGames: `${champData.totalGames}`
+        }, (err, data) => {
+          if (err) {
+            log(`Error updating champion. Error: ${err}`);
+            reject(err);
+          } else {
+            log(`Champion data updated: ${data}`);
+            resolve(false);
+          }
+        }
+      );
+    }
   });
 };
 
