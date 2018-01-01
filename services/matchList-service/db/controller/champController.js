@@ -30,9 +30,28 @@ const updateChampionData = async (req, res) => {
               newChampData.popularRune = popular.rune;
               newChampData.popularWR = `${popular.wr}`;
               log(`This is newChampData after getPopRune: ${JSON.stringify(newChampData)}`);
-              updateChampion(newChampData);
+              updateChampion(newChampData)
+                .then(isNew => {
+                  if (isNew) {
+                    res.status(201).send('New Champion added to database');
+                  } else {
+                    res.status(200).send('Champion data updated');
+                  }
+                })
+                .catch(err => {
+                  log(`Error in updateChampion. Error: ${err}`);
+                  res.status(500).send(err);
+                });
             })
+            .catch(err => {
+              log(`Error in getPopRune. Error: ${err}`);
+              res.status(500).send(err);
+            });
         })
+        .catch(err => {
+          log(`Error in getBestRune. Error: ${err}`);
+          res.status(500).send(err);
+        });
     }
   });
 };
