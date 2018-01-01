@@ -12,7 +12,7 @@ const { createRuneHash } = require('../../lib/createRuneHash');
 mongoose.Promise = bluebird;
 
 // Starts update on match and rune list addition
-const updateMatchLists = (req, res, matchList) => {
+const updateMatchLists = (matchList) => {
   matchList.forEach(async (matchId) => {
     const check = await checkMatchList(matchId);
     setTimeout(() => {
@@ -73,7 +73,7 @@ const checkMatchList = (matchId) => {
   });
 };
 
-// Using non-used MatchIds, add each summoner w/ their champ + runes into database
+// Using non-used MatchIds, grab all summoners and in-game details
 const addMatchPerSummoner = (matchId) => {
   return new Promise ((resolve, reject) => {
     axios({
@@ -101,6 +101,7 @@ const addMatchPerSummoner = (matchId) => {
   })
 };
 
+// Adds new Rune data into database
 const addToRune = async (runeObj) => {
   const newRune = new Rune(runeObj);
   log(`This is new Rune: ${newRune}`);
@@ -108,16 +109,4 @@ const addToRune = async (runeObj) => {
   log(`New Rune added`);
 };
 
-const updateRunes = async (req, res) => {
-  try {
-    const allRunes = await Rune.find({ championId: req.body.championId });
-    if (allRunes) {
-      log('This is allRunes: ', allRunes);
-    }
-  } catch (err) {
-    log(`Error in updateRunes: ${err}`);
-    res.status(500).send(err);
-  }
-}
-
-module.exports = { updateMatchLists, updateRunes };
+module.exports = { updateMatchLists };
