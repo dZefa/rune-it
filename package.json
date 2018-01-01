@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "description": "RIOT Games API Challenge 2017",
   "scripts": {
-    "start-server": "node server/index.js",
+    "start-rest-server": "node server/index.js",
+    "start-service": "node services/matchList-service/index.js",
     "build-prod": "webpack --config client/webpack.js",
-    "build-dev": "webpack -w --config client/webpack.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build-dev": "webpack -w --config client/webpack.js"
   },
   "author": "Daniel Chong",
   "dependencies": {
@@ -16,8 +16,6 @@
     "cors": "^2.8.4",
     "dotenv": "^4.0.0",
     "express": "^4.16.2",
-    "history": "^4.7.2",
-    "localforage": "^1.5.5",
     "mongoose": "^4.13.7",
     "morgan": "^1.9.0",
     "prop-types": "^15.6.0",
