@@ -50,11 +50,10 @@ module.exports = {
     new Dotenv({
       path: ENV_DIR,
       safe: false,
+    }),
+    new UglifyJSPlugin({
+      sourceMap: false,
+      uglifyOptions: { ecma: 8 },
     })
-    // Uncomment this out when building for production
-    // new UglifyJSPlugin({
-    //   sourceMap: false,
-    //   uglifyOptions: { ecma: 8 },
-    // })
   ]
 };
